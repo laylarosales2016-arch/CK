@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Payslip Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --input-bg: #222;
+            --accent-green: #39FF14;
+            --accent-gold: #FFD700;
+            --accent-red: #FF3131;
+            --accent-blue: #00E5FF;
+            --accent-purple: #7C4DFF;
+            --accent-pink: #FF4081;
+            --text-main: #ffffff;
+            --text-secondary: #b0bec5;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            font-size: 28px;
+            background: linear-gradient(to right, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.02);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #333;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .multiplier {
+            font-size: 10px;
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #aaa;
+        }
+
+        .hm-inputs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .hm-field {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid #444;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            border-color: #666;
+            background: #2a222a;
+        }
+
+        .hm-field span {
+            font-size: 9px;
+            text-align: center;
+            color: #666;
+        }
+
+        .result-box {
+            position: sticky;
+            bottom: 20px;
+            background: linear-gradient(135deg, #111, #000);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid var(--accent-green);
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(57, 255, 20, 0.15);
+            margin-top: 30px;
+        }
+
+        .result-box p {
+            margin: 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .result-box h2 {
+            margin: 5px 0 0 0;
+            font-size: 42px;
+            color: var(--accent-green);
+            text-shadow: 0 0 20px rgba(57, 255, 20, 0.4);
+        }
+
+        .equiv-section {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .equiv-card {
+            background: #111;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 3px solid #333;
+        }
+
+        .equiv-card .val {
+            display: block;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 2px;
+        }
+
+        .equiv-card .label {
+            font-size: 10px;
+            color: #777;
+            text-transform: uppercase;
+        }
+
+        /* Color classes */
+        .color-reg { border-left-color: var(--accent-gold); }
+        .color-ot { border-left-color: var(--accent-green); }
+        .color-spec { border-left-color: var(--accent-blue); }
+        .color-legal { border-left-color: var(--accent-pink); }
+        .color-late { border-left-color: var(--accent-red); }
+
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            .result-box h2 { font-size: 32px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>PAYSLIP CALCULATOR</h1>
+
+    <!-- Core Work -->
+    <div class="section">
+        <div class="section-title">Core Attendance</div>
+        <div class="grid">
+            <div class="input-group">
+                <div class="label-row"><label>REGULAR WORK</label><span class="multiplier">100%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-reg" value="103" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-reg" value="0" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="label-row"><label style="color:var(--accent-red)">ABSENT / LATE</label><span class="multiplier">-100%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-late" value="0" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-late" value="23" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OT & Premiums -->
+    <div class="section">
+        <div class="section-title">Overtime & Premiums</div>
+        <div class="grid">
+            <div class="input-group">
+                <div class="label-row"><label>REG OT</label><span class="multiplier">125%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-reg-ot" value="8" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-reg-ot" value="1" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="label-row"><label>RD PREMIUM</label><span class="multiplier">30%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-rd-p" value="0" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-rd-p" value="0" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="label-row"><label>RD OT / SPECIAL OT</label><span class="multiplier">169%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-rd-ot" value="0" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-rd-ot" value="0" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="label-row"><label>LEGAL PREMIUM</label><span class="multiplier">100%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-leg-p" value="0" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-leg-p" value="0" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="label-row"><label>LEGAL OT</label><span class="multiplier">260%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-leg-ot" value="0" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-leg-ot" value="0" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <div class="label-row"><label>NIGHT DIFF</label><span class="multiplier">10%</span></div>
+                <div class="hm-inputs">
+                    <div class="hm-field"><input type="number" id="h-nd" value="0" oninput="calculate()"><span>Hours</span></div>
+                    <div class="hm-field"><input type="number" id="m-nd" value="0" oninput="calculate()"><span>Mins</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Result -->
+    <div class="result-box">
+        <p>ESTIMATED NET PAY</p>
+        <h2 id="net-pay">₱0.00</h2>
+    </div>
+
+    <!-- Equivalence -->
+    <div class="equiv-section">
+        <div class="equiv-card color-reg">
+            <span class="val" id="eq-reg">0h 0m</span>
+            <span class="label">Regular Hours</span>
+        </div>
+        <div class="equiv-card color-ot">
+            <span class="val" id="eq-ot">0h 0m</span>
+            <span class="label">Reg OT Hours</span>
+        </div>
+        <div class="equiv-card color-legal">
+            <span class="val" id="eq-leg">0h 0m</span>
+            <span class="label">Legal OT Hours</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BASE_RATE = 75.0;
+
+    function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
+    function toDec(hId, mId) { return getVal(hId) + (getVal(mId) / 60); }
+
+    function formatTime(dec) {
+        if (dec < 0) return "0h 0m";
+        const h = Math.floor(dec);
+        const m = Math.round((dec - h) * 60);
+        return `${h}h ${m}m`;
+    }
+
+    function calculate() {
+        const reg = toDec('h-reg', 'm-reg');
+        const late = toDec('h-late', 'm-late');
+        const regOt = toDec('h-reg-ot', 'm-reg-ot');
+        const rdP = toDec('h-rd-p', 'm-rd-p');
+        const rdOt = toDec('h-rd-ot', 'm-rd-ot');
+        const legP = toDec('h-leg-p', 'm-leg-p');
+        const legOt = toDec('h-leg-ot', 'm-leg-ot');
+        const nd = toDec('h-nd', 'm-nd');
+
+        const total = (reg * BASE_RATE * 1.0) +
+                    (regOt * BASE_RATE * 1.25) +
+                    (rdP * BASE_RATE * 0.30) +
+                    (rdOt * BASE_RATE * 1.69) +
+                    (legP * BASE_RATE * 1.0) +
+                    (legOt * BASE_RATE * 2.60) +
+                    (nd * BASE_RATE * 0.10) -
+                    (late * BASE_RATE * 1.0);
+
+        document.getElementById('net-pay').innerText = '₱' + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        // Equivalence
+        document.getElementById('eq-reg').innerText = formatTime(total / BASE_RATE);
+        document.getElementById('eq-ot').innerText = formatTime(total / (BASE_RATE * 1.25));
+        document.getElementById('eq-leg').innerText = formatTime(total / (BASE_RATE * 2.60));
+    }
+
+    // Initial run
+    calculate();
+</script>
+
+</body>
+</html>

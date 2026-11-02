@@ -151,17 +151,27 @@
     <script>
         let lastTimestamp = 0;
         let pollInterval = null;
+        let useRawFallback = false;
+
+        function extractGistId(input) {
+            let str = input.trim();
+            if (str.includes('/')) {
+                const parts = str.split('/');
+                str = parts[parts.length - 1];
+            }
+            return str;
+        }
+
+        function getRawCdnUrl(input) {
+            const gistId = extractGistId(input);
+            return 'https://gist.githubusercontent.com/laylarosales2016-arch/' + gistId + '/raw/queue.json';
+        }
 
         function startListening() {
             let urlInput = document.getElementById('gistUrl').value.trim();
             if (!urlInput) {
                 alert('Please enter your GitHub Gist API URL or Webhook endpoint URL!');
                 return;
-            }
-
-            if (!urlInput.startsWith('http')) {
-                urlInput = 'https://api.github.com/gists/' + urlInput;
-                document.getElementById('gistUrl').value = urlInput;
             }
 
             window.speechSynthesis.cancel();
@@ -172,17 +182,27 @@
             document.getElementById('statusText').style.color = '#22c55e';
 
             if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(() => checkLatestAnnouncement(urlInput), 1500);
+            pollInterval = setInterval(() => checkLatestAnnouncement(urlInput), 2000);
             checkLatestAnnouncement(urlInput);
         }
 
-        async function checkLatestAnnouncement(url) {
+        async function checkLatestAnnouncement(inputUrl) {
+            let targetUrl = inputUrl;
+            if (useRawFallback || !inputUrl.startsWith('http')) {
+                targetUrl = getRawCdnUrl(inputUrl);
+            }
+
             try {
-                const fetchUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                const fetchUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                 const response = await fetch(fetchUrl, { cache: 'no-store' });
+
                 if (!response.ok) {
-                    document.getElementById('statusText').innerText = 'Status Error: Server returned ' + response.status + ' ' + response.statusText;
-                    document.getElementById('statusText').style.color = '#ef4444';
+                    if (response.status === 403 && !useRawFallback) {
+                        useRawFallback = true;
+                        return checkLatestAnnouncement(inputUrl);
+                    }
+                    document.getElementById('statusText').innerText = 'Status Notice: Retrying connection... (' + response.status + ')';
+                    document.getElementById('statusText').style.color = '#f59e0b';
                     return;
                 }
 
@@ -208,8 +228,12 @@
                     triggerRemoteAnnouncement(payload);
                 }
             } catch (err) {
-                document.getElementById('statusText').innerText = 'Status Connection Error: ' + err.message;
-                document.getElementById('statusText').style.color = '#ef4444';
+                if (!useRawFallback) {
+                    useRawFallback = true;
+                    return checkLatestAnnouncement(inputUrl);
+                }
+                document.getElementById('statusText').innerText = 'Status Notice: Connecting...';
+                document.getElementById('statusText').style.color = '#f59e0b';
             }
         }
 

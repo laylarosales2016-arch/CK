@@ -129,7 +129,7 @@
         <h1>🎙️ Chowking Remote Queue Receiver</h1>
 
         <div class="config-box">
-            <label for="gistUrl">GitHub Gist / Webhook JSON URL:</label>
+            <label for="gistUrl">GitHub Gist API / Webhook JSON URL:</label>
             <input type="text" id="gistUrl" placeholder="https://api.github.com/gists/YOUR_GIST_ID">
             <button class="btn" id="btnConnect" onclick="startListening()">🔊 Connect &amp; Enable Voice Output</button>
         </div>
@@ -150,32 +150,46 @@
 
     <script>
         let lastTimestamp = 0;
-        let isListening = false;
         let pollInterval = null;
 
         function startListening() {
-            const urlInput = document.getElementById('gistUrl').value.trim();
+            let urlInput = document.getElementById('gistUrl').value.trim();
             if (!urlInput) {
                 alert('Please enter your GitHub Gist API URL or Webhook endpoint URL!');
                 return;
             }
 
+            // Auto-format Gist ID if user pasted just the Gist ID
+            if (!urlInput.startsWith('http')) {
+                urlInput = 'https://api.github.com/gists/' + urlInput;
+                document.getElementById('gistUrl').value = urlInput;
+            }
+
             // Speak dummy utterance to unlock browser audio autoplay
-            const unlockUtterance = new SpeechSynthesisUtterance('Remote voice output connected and active.');
+            window.speechSynthesis.cancel();
+            const unlockUtterance = new SpeechSynthesisUtterance('Remote voice output connected.');
             window.speechSynthesis.speak(unlockUtterance);
 
-            document.getElementById('statusText').innerText = 'Status: Listening for live announcements...';
+            document.getElementById('statusText').innerText = 'Status: Connected! Listening for announcements...';
             document.getElementById('statusText').style.color = '#22c55e';
 
             if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(() => checkLatestAnnouncement(urlInput), 2000);
+            pollInterval = setInterval(() => checkLatestAnnouncement(urlInput), 1500);
             checkLatestAnnouncement(urlInput);
         }
 
         async function checkLatestAnnouncement(url) {
             try {
-                const response = await fetch(url, { cache: 'no-store' });
-                if (!response.ok) return;
+                const fetchUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                const response = await fetch(fetchUrl, { cache: 'no-store' });
+                if (!response.ok) {
+                    document.getElementById('statusText').innerText = 'Status Error: Server returned ' + response.status + ' ' + response.statusText;
+                    document.getElementById('statusText').style.color = '#ef4444';
+                    return;
+                }
+
+                document.getElementById('statusText').innerText = 'Status: Connected & Listening...';
+                document.getElementById('statusText').style.color = '#22c55e';
 
                 const data = await response.json();
                 let payload = data;
@@ -184,7 +198,11 @@
                 if (data.files) {
                     const firstFileKey = Object.keys(data.files)[0];
                     if (firstFileKey && data.files[firstFileKey].content) {
-                        payload = JSON.parse(data.files[firstFileKey].content);
+                        try {
+                            payload = JSON.parse(data.files[firstFileKey].content);
+                        } catch(e) {
+                            payload = { text: data.files[firstFileKey].content };
+                        }
                     }
                 }
 
@@ -193,7 +211,8 @@
                     triggerRemoteAnnouncement(payload);
                 }
             } catch (err) {
-                console.error('Polling error:', err);
+                document.getElementById('statusText').innerText = 'Status Connection Error: ' + err.message;
+                document.getElementById('statusText').style.color = '#ef4444';
             }
         }
 
@@ -208,7 +227,6 @@
                 utterance.rate = payload.speed || 1.0;
                 utterance.pitch = payload.pitch || 1.0;
 
-                // Try to select an English voice if available
                 const voices = window.speechSynthesis.getVoices();
                 const enVoice = voices.find(v => v.lang.startsWith('en'));
                 if (enVoice) utterance.voice = enVoice;

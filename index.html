@@ -130,7 +130,7 @@
 
         <div class="config-box">
             <label for="gistUrl">GitHub Gist API / Webhook JSON URL:</label>
-            <input type="text" id="gistUrl" placeholder="https://api.github.com/gists/YOUR_GIST_ID">
+            <input type="text" id="gistUrl" value="https://api.github.com/gists/fbc66c51b7d89b14d7ed209952cb0c94" placeholder="https://api.github.com/gists/YOUR_GIST_ID">
             <button class="btn" id="btnConnect" onclick="startListening()">🔊 Connect &amp; Enable Voice Output</button>
         </div>
 
@@ -159,13 +159,11 @@
                 return;
             }
 
-            // Auto-format Gist ID if user pasted just the Gist ID
             if (!urlInput.startsWith('http')) {
                 urlInput = 'https://api.github.com/gists/' + urlInput;
                 document.getElementById('gistUrl').value = urlInput;
             }
 
-            // Speak dummy utterance to unlock browser audio autoplay
             window.speechSynthesis.cancel();
             const unlockUtterance = new SpeechSynthesisUtterance('Remote voice output connected.');
             window.speechSynthesis.speak(unlockUtterance);
@@ -194,7 +192,6 @@
                 const data = await response.json();
                 let payload = data;
 
-                // Handle GitHub Gist response format
                 if (data.files) {
                     const firstFileKey = Object.keys(data.files)[0];
                     if (firstFileKey && data.files[firstFileKey].content) {

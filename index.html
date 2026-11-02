@@ -151,12 +151,11 @@
     <script>
         let lastTimestamp = 0;
         let pollInterval = null;
-        let useRawFallback = false;
 
         function extractGistId(input) {
             let str = input.trim();
             if (str.includes('/')) {
-                const parts = str.split('/');
+                const parts = str.split('/').filter(p => p.length > 0);
                 str = parts[parts.length - 1];
             }
             return str;
@@ -164,7 +163,7 @@
 
         function getRawCdnUrl(input) {
             const gistId = extractGistId(input);
-            return 'https://gist.githubusercontent.com/laylarosales2016-arch/' + gistId + '/raw/queue.json';
+            return 'https://gist.githubusercontent.com/laylarosales2016-arch/' + gistId + '/raw';
         }
 
         function startListening() {
@@ -187,9 +186,11 @@
         }
 
         async function checkLatestAnnouncement(inputUrl) {
-            let targetUrl = inputUrl;
-            if (useRawFallback || !inputUrl.startsWith('http')) {
-                targetUrl = getRawCdnUrl(inputUrl);
+            let targetUrl = inputUrl.trim();
+
+            // Route through raw CDN directly to bypass API 403 rate limits and 404 subpath errors
+            if (targetUrl.includes('api.github.com/gists/') || targetUrl.includes('gist.github.com/') || !targetUrl.startsWith('http')) {
+                targetUrl = getRawCdnUrl(targetUrl);
             }
 
             try {
@@ -197,11 +198,7 @@
                 const response = await fetch(fetchUrl, { cache: 'no-store' });
 
                 if (!response.ok) {
-                    if (response.status === 403 && !useRawFallback) {
-                        useRawFallback = true;
-                        return checkLatestAnnouncement(inputUrl);
-                    }
-                    document.getElementById('statusText').innerText = 'Status Notice: Retrying connection... (' + response.status + ')';
+                    document.getElementById('statusText').innerText = 'Status Notice: Connecting... (' + response.status + ')';
                     document.getElementById('statusText').style.color = '#f59e0b';
                     return;
                 }
@@ -228,11 +225,7 @@
                     triggerRemoteAnnouncement(payload);
                 }
             } catch (err) {
-                if (!useRawFallback) {
-                    useRawFallback = true;
-                    return checkLatestAnnouncement(inputUrl);
-                }
-                document.getElementById('statusText').innerText = 'Status Notice: Connecting...';
+                document.getElementById('statusText').innerText = 'Status Notice: Retrying connection...';
                 document.getElementById('statusText').style.color = '#f59e0b';
             }
         }

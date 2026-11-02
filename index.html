@@ -129,8 +129,8 @@
         <h1>🎙️ Chowking Remote Queue Receiver</h1>
 
         <div class="config-box">
-            <label for="gistUrl">GitHub Gist API / Webhook JSON URL:</label>
-            <input type="text" id="gistUrl" value="https://api.github.com/gists/fbc66c51b7d89b14d7ed209952cb0c94" placeholder="https://api.github.com/gists/YOUR_GIST_ID">
+            <label for="gistUrl">Remote Realtime Endpoint URL:</label>
+            <input type="text" id="gistUrl" value="https://jsonblob.com/api/jsonBlob/1342898606019518464">
             <button class="btn" id="btnConnect" onclick="startListening()">🔊 Connect &amp; Enable Voice Output</button>
         </div>
 
@@ -145,31 +145,17 @@
             <div class="spoken-text" id="displayText">Ready to speak announcements remotely...</div>
         </div>
 
-        <div class="status-bar" id="statusText">Status: Disconnected. Enter Gist ID / Webhook URL above and tap Connect.</div>
+        <div class="status-bar" id="statusText">Status: Disconnected. Tap Connect button above to start.</div>
     </div>
 
     <script>
         let lastTimestamp = 0;
         let pollInterval = null;
 
-        function extractGistId(input) {
-            let str = input.trim();
-            if (str.includes('/')) {
-                const parts = str.split('/').filter(p => p.length > 0);
-                str = parts[parts.length - 1];
-            }
-            return str;
-        }
-
-        function getRawCdnUrl(input) {
-            const gistId = extractGistId(input);
-            return 'https://gist.githubusercontent.com/laylarosales2016-arch/' + gistId + '/raw';
-        }
-
         function startListening() {
             let urlInput = document.getElementById('gistUrl').value.trim();
             if (!urlInput) {
-                alert('Please enter your GitHub Gist API URL or Webhook endpoint URL!');
+                alert('Please enter your Remote Endpoint URL!');
                 return;
             }
 
@@ -181,20 +167,13 @@
             document.getElementById('statusText').style.color = '#22c55e';
 
             if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(() => checkLatestAnnouncement(urlInput), 2000);
+            pollInterval = setInterval(() => checkLatestAnnouncement(urlInput), 1000);
             checkLatestAnnouncement(urlInput);
         }
 
-        async function checkLatestAnnouncement(inputUrl) {
-            let targetUrl = inputUrl.trim();
-
-            // Route through raw CDN directly to bypass API 403 rate limits and 404 subpath errors
-            if (targetUrl.includes('api.github.com/gists/') || targetUrl.includes('gist.github.com/') || !targetUrl.startsWith('http')) {
-                targetUrl = getRawCdnUrl(targetUrl);
-            }
-
+        async function checkLatestAnnouncement(targetUrl) {
             try {
-                const fetchUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                const fetchUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'cb=' + Date.now();
                 const response = await fetch(fetchUrl, { cache: 'no-store' });
 
                 if (!response.ok) {

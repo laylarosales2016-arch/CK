@@ -162,9 +162,12 @@
                 </div>
             </div>
 
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; background: #0b1329; padding: 10px 14px; border-radius: 8px;">
-                <label style="margin: 0; cursor: pointer; color: #ffffff;" for="boostToggle">🔊 Volume Boost (Extra Loud)</label>
-                <input type="checkbox" id="boostToggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; background: #0b1329; padding: 12px 14px; border-radius: 10px; border: 1px solid #2a3b75;">
+                <div>
+                    <label style="margin: 0; cursor: pointer; color: #ffffff; font-size: 13px;" for="boostToggle">🔊 Volume Boost (Extra Loud Mode)</label>
+                    <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Amplifies speech &amp; audio for speakers and TVs</div>
+                </div>
+                <input type="checkbox" id="boostToggle" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #8b79ff;">
             </div>
 
             <button class="btn" id="btnConnect" onclick="startListening()">⚡ Connect Supabase &amp; Enable Voice</button>
@@ -284,7 +287,7 @@
             }
 
             const isBoosted = document.getElementById('boostToggle').checked;
-            const gainVolume = isBoosted ? 0.6 : 0.3;
+            const gainVolume = isBoosted ? 0.8 : 0.3;
 
             const notes = [
                 { f: 264, d: 0.35 }, { f: 264, d: 0.35 }, { f: 297, d: 0.7 }, { f: 264, d: 0.7 }, { f: 352, d: 0.7 }, { f: 330, d: 1.2 },

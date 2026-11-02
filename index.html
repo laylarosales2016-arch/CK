@@ -129,9 +129,13 @@
         <h1>🎙️ Chowking Remote Queue Receiver</h1>
 
         <div class="config-box">
-            <label for="gistUrl">Remote Realtime Endpoint URL:</label>
-            <input type="text" id="gistUrl" value="https://jsonblob.com/api/jsonBlob/1342898606019518464">
-            <button class="btn" id="btnConnect" onclick="startListening()">🔊 Connect &amp; Enable Voice Output</button>
+            <label for="supabaseUrl">Supabase Project URL:</label>
+            <input type="text" id="supabaseUrl" placeholder="https://YOUR_PROJECT_REF.supabase.co">
+
+            <label for="anonKey">Supabase Anon Key:</label>
+            <input type="password" id="anonKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+
+            <button class="btn" id="btnConnect" onclick="startListening()">⚡ Connect Supabase &amp; Enable Voice</button>
         </div>
 
         <div class="display-card">
@@ -145,7 +149,7 @@
             <div class="spoken-text" id="displayText">Ready to speak announcements remotely...</div>
         </div>
 
-        <div class="status-bar" id="statusText">Status: Disconnected. Tap Connect button above to start.</div>
+        <div class="status-bar" id="statusText">Status: Disconnected. Enter Supabase URL and Anon Key above to start.</div>
     </div>
 
     <script>
@@ -153,28 +157,38 @@
         let pollInterval = null;
 
         function startListening() {
-            let urlInput = document.getElementById('gistUrl').value.trim();
-            if (!urlInput) {
-                alert('Please enter your Remote Endpoint URL!');
+            let supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+            let anonKey = document.getElementById('anonKey').value.trim();
+
+            if (!supabaseUrl || !anonKey) {
+                alert('Please enter your Supabase Project URL and Anon Key!');
                 return;
             }
 
             window.speechSynthesis.cancel();
-            const unlockUtterance = new SpeechSynthesisUtterance('Remote voice output connected.');
+            const unlockUtterance = new SpeechSynthesisUtterance('Supabase realtime voice output connected.');
             window.speechSynthesis.speak(unlockUtterance);
 
-            document.getElementById('statusText').innerText = 'Status: Connected! Listening for announcements...';
+            document.getElementById('statusText').innerText = 'Status: Connected to Supabase! Listening...';
             document.getElementById('statusText').style.color = '#22c55e';
 
             if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(() => checkLatestAnnouncement(urlInput), 1000);
-            checkLatestAnnouncement(urlInput);
+            pollInterval = setInterval(() => checkSupabase(supabaseUrl, anonKey), 800);
+            checkSupabase(supabaseUrl, anonKey);
         }
 
-        async function checkLatestAnnouncement(targetUrl) {
+        async function checkSupabase(supabaseUrl, anonKey) {
             try {
-                const fetchUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'cb=' + Date.now();
-                const response = await fetch(fetchUrl, { cache: 'no-store' });
+                let cleanUrl = supabaseUrl.trim();
+                if (!cleanUrl.endsWith('/')) cleanUrl += '/';
+                const endpoint = cleanUrl + 'rest/v1/queue?select=*&order=timestamp.desc&limit=1';
+
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'apikey': anonKey,
+                        'Authorization': 'Bearer ' + anonKey
+                    }
+                });
 
                 if (!response.ok) {
                     document.getElementById('statusText').innerText = 'Status Notice: Connecting... (' + response.status + ')';
@@ -182,26 +196,16 @@
                     return;
                 }
 
-                document.getElementById('statusText').innerText = 'Status: Connected & Listening...';
+                document.getElementById('statusText').innerText = 'Status: Connected to Supabase & Listening...';
                 document.getElementById('statusText').style.color = '#22c55e';
 
-                const data = await response.json();
-                let payload = data;
-
-                if (data.files) {
-                    const firstFileKey = Object.keys(data.files)[0];
-                    if (firstFileKey && data.files[firstFileKey].content) {
-                        try {
-                            payload = JSON.parse(data.files[firstFileKey].content);
-                        } catch(e) {
-                            payload = { text: data.files[firstFileKey].content };
-                        }
+                const rows = await response.json();
+                if (rows && rows.length > 0) {
+                    const payload = rows[0];
+                    if (payload && payload.timestamp && payload.timestamp > lastTimestamp) {
+                        lastTimestamp = payload.timestamp;
+                        triggerRemoteAnnouncement(payload);
                     }
-                }
-
-                if (payload && payload.timestamp && payload.timestamp > lastTimestamp) {
-                    lastTimestamp = payload.timestamp;
-                    triggerRemoteAnnouncement(payload);
                 }
             } catch (err) {
                 document.getElementById('statusText').innerText = 'Status Notice: Retrying connection...';

@@ -56,7 +56,9 @@
         .config-box label:first-child {
             margin-top: 0;
         }
-        .config-box input, .config-box select {
+        .config-box input[type="text"],
+        .config-box input[type="password"],
+        .config-box select {
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -64,6 +66,11 @@
             background-color: #0b1329;
             color: #ffffff;
             font-size: 13px;
+        }
+        .config-box input[type="range"] {
+            width: 100%;
+            accent-color: #8b79ff;
+            cursor: pointer;
         }
         .btn {
             background: linear-gradient(135deg, #8b79ff, #6a4dff);
@@ -144,6 +151,22 @@
                 <option value="">Auto-Detect English Voice</option>
             </select>
 
+            <div style="display: flex; gap: 12px; margin-top: 10px;">
+                <div style="flex: 1;">
+                    <label for="speedInput" style="margin-top: 0;">Speech Speed: <span id="speedVal">1.0</span>x</label>
+                    <input type="range" id="speedInput" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('speedVal').innerText = this.value">
+                </div>
+                <div style="flex: 1;">
+                    <label for="pitchInput" style="margin-top: 0;">Voice Pitch: <span id="pitchVal">1.0</span>x</label>
+                    <input type="range" id="pitchInput" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('pitchVal').innerText = this.value">
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; background: #0b1329; padding: 10px 14px; border-radius: 8px;">
+                <label style="margin: 0; cursor: pointer; color: #ffffff;" for="boostToggle">🔊 Volume Boost (Extra Loud)</label>
+                <input type="checkbox" id="boostToggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+            </div>
+
             <button class="btn" id="btnConnect" onclick="startListening()">⚡ Connect Supabase &amp; Enable Voice</button>
         </div>
 
@@ -197,7 +220,6 @@
                 return;
             }
 
-            // Init Web Audio API
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
@@ -261,6 +283,9 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
 
+            const isBoosted = document.getElementById('boostToggle').checked;
+            const gainVolume = isBoosted ? 0.6 : 0.3;
+
             const notes = [
                 { f: 264, d: 0.35 }, { f: 264, d: 0.35 }, { f: 297, d: 0.7 }, { f: 264, d: 0.7 }, { f: 352, d: 0.7 }, { f: 330, d: 1.2 },
                 { f: 264, d: 0.35 }, { f: 264, d: 0.35 }, { f: 297, d: 0.7 }, { f: 264, d: 0.7 }, { f: 396, d: 0.7 }, { f: 352, d: 1.2 },
@@ -277,7 +302,7 @@
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(n.f, currTime);
 
-                gain.gain.setValueAtTime(0.3, currTime);
+                gain.gain.setValueAtTime(gainVolume, currTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, currTime + n.d);
 
                 osc.connect(gain);
@@ -320,8 +345,15 @@
             if (payload.text) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(payload.text);
-                utterance.rate = payload.speed || 1.0;
-                utterance.pitch = payload.pitch || 1.0;
+
+                // Read Speech Speed, Pitch, and Volume Boost directly from Web Sliders
+                const userSpeed = parseFloat(document.getElementById('speedInput').value);
+                const userPitch = parseFloat(document.getElementById('pitchInput').value);
+                const isBoosted = document.getElementById('boostToggle').checked;
+
+                utterance.rate = !isNaN(userSpeed) ? userSpeed : 1.0;
+                utterance.pitch = !isNaN(userPitch) ? userPitch : 1.0;
+                utterance.volume = isBoosted ? 1.0 : 0.8;
 
                 const voices = window.speechSynthesis.getVoices();
                 const selectedIdx = document.getElementById('voiceSelect').value;

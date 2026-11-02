@@ -23,7 +23,7 @@
         }
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 650px;
             background-color: #131c38;
             border-radius: 20px;
             padding: 30px;
@@ -42,7 +42,7 @@
             background-color: #1b264f;
             border-radius: 12px;
             padding: 15px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             text-align: left;
         }
         .config-box label {
@@ -51,8 +51,12 @@
             font-weight: bold;
             display: block;
             margin-bottom: 5px;
+            margin-top: 10px;
         }
-        .config-box input {
+        .config-box label:first-child {
+            margin-top: 0;
+        }
+        .config-box input, .config-box select {
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -60,7 +64,6 @@
             background-color: #0b1329;
             color: #ffffff;
             font-size: 13px;
-            margin-bottom: 10px;
         }
         .btn {
             background: linear-gradient(135deg, #8b79ff, #6a4dff);
@@ -72,6 +75,7 @@
             border-radius: 10px;
             cursor: pointer;
             width: 100%;
+            margin-top: 15px;
             transition: all 0.2s;
         }
         .btn:hover {
@@ -130,10 +134,15 @@
 
         <div class="config-box">
             <label for="supabaseUrl">Supabase Project URL:</label>
-            <input type="text" id="supabaseUrl" value="https://mluffwjvkbekyaslrxnz.supabase.co" placeholder="https://YOUR_PROJECT_REF.supabase.co">
+            <input type="text" id="supabaseUrl" value="https://mluffwjvkbekyaslrxnz.supabase.co">
 
             <label for="anonKey">Supabase Anon Key:</label>
-            <input type="text" id="anonKey" value="sb_publishable_mszkB4HRPo-vRhxQOXgUZw_Aprw6Z9y" placeholder="sb_publishable_...">
+            <input type="password" id="anonKey" value="sb_publishable_mszkB4HRPo-vRhxQOXgUZw_Aprw6Z9y">
+
+            <label for="voiceSelect">Select Speech Voice Engine:</label>
+            <select id="voiceSelect">
+                <option value="">Auto-Detect English Voice</option>
+            </select>
 
             <button class="btn" id="btnConnect" onclick="startListening()">⚡ Connect Supabase &amp; Enable Voice</button>
         </div>
@@ -146,15 +155,38 @@
 
             <div class="number-display" id="displayNumber">000</div>
 
-            <div class="spoken-text" id="displayText">Ready to speak announcements remotely...</div>
+            <div class="spoken-text" id="displayText">Ready to speak announcements and play birthday songs remotely...</div>
         </div>
 
-        <div class="status-bar" id="statusText">Status: Disconnected. Enter Supabase URL and Anon Key above to start.</div>
+        <div class="status-bar" id="statusText">Status: Disconnected. Tap Connect button above to start.</div>
     </div>
 
     <script>
         let lastTimestamp = 0;
         let pollInterval = null;
+        let audioCtx = null;
+        let birthdayPlaying = false;
+        let activeToneOscillators = [];
+
+        function loadBrowserVoices() {
+            const voiceSelect = document.getElementById('voiceSelect');
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices || voices.length === 0) return;
+
+            voiceSelect.innerHTML = '<option value="">Auto-Detect English Voice</option>';
+            voices.forEach((v, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = `${v.name} (${v.lang})`;
+                if (v.default || v.name.includes('Google') || v.name.includes('Natural')) {
+                    opt.selected = true;
+                }
+                voiceSelect.appendChild(opt);
+            });
+        }
+
+        window.speechSynthesis.onvoiceschanged = loadBrowserVoices;
+        loadBrowserVoices();
 
         function startListening() {
             let supabaseUrl = document.getElementById('supabaseUrl').value.trim();
@@ -165,8 +197,16 @@
                 return;
             }
 
+            // Init Web Audio API
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             window.speechSynthesis.cancel();
-            const unlockUtterance = new SpeechSynthesisUtterance('Supabase realtime voice output connected.');
+            const unlockUtterance = new SpeechSynthesisUtterance('Remote voice and birthday audio output connected.');
             window.speechSynthesis.speak(unlockUtterance);
 
             document.getElementById('statusText').innerText = 'Status: Connected to Supabase! Listening...';
@@ -213,11 +253,70 @@
             }
         }
 
+        function playBirthdayMelody() {
+            stopBirthdayMelody();
+            birthdayPlaying = true;
+
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const notes = [
+                { f: 264, d: 0.35 }, { f: 264, d: 0.35 }, { f: 297, d: 0.7 }, { f: 264, d: 0.7 }, { f: 352, d: 0.7 }, { f: 330, d: 1.2 },
+                { f: 264, d: 0.35 }, { f: 264, d: 0.35 }, { f: 297, d: 0.7 }, { f: 264, d: 0.7 }, { f: 396, d: 0.7 }, { f: 352, d: 1.2 },
+                { f: 264, d: 0.35 }, { f: 264, d: 0.35 }, { f: 528, d: 0.7 }, { f: 440, d: 0.7 }, { f: 352, d: 0.7 }, { f: 330, d: 0.7 }, { f: 297, d: 1.0 },
+                { f: 466, d: 0.35 }, { f: 466, d: 0.35 }, { f: 440, d: 0.7 }, { f: 352, d: 0.7 }, { f: 396, d: 0.7 }, { f: 352, d: 1.5 }
+            ];
+
+            let currTime = audioCtx.currentTime + 0.1;
+            notes.forEach(n => {
+                if (!birthdayPlaying) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(n.f, currTime);
+
+                gain.gain.setValueAtTime(0.3, currTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, currTime + n.d);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(currTime);
+                osc.stop(currTime + n.d);
+                activeToneOscillators.push(osc);
+
+                currTime += n.d + 0.05;
+            });
+        }
+
+        function stopBirthdayMelody() {
+            birthdayPlaying = false;
+            activeToneOscillators.forEach(osc => {
+                try { osc.stop(); } catch(e) {}
+            });
+            activeToneOscillators = [];
+        }
+
         function triggerRemoteAnnouncement(payload) {
             document.getElementById('displayNumber').innerText = payload.number || '0';
             document.getElementById('displayText').innerText = payload.text || '';
             document.getElementById('badgeType').innerText = (payload.type || 'ORDER').toUpperCase();
 
+            // Handle Birthday Command
+            if (payload.type === 'BIRTHDAY' || payload.action === 'birthday_play') {
+                if (payload.action === 'stop' || payload.action === 'birthday_stop') {
+                    stopBirthdayMelody();
+                } else {
+                    playBirthdayMelody();
+                }
+                return;
+            } else {
+                stopBirthdayMelody();
+            }
+
+            // Speak Speech Announcement
             if (payload.text) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(payload.text);
@@ -225,8 +324,14 @@
                 utterance.pitch = payload.pitch || 1.0;
 
                 const voices = window.speechSynthesis.getVoices();
-                const enVoice = voices.find(v => v.lang.startsWith('en'));
-                if (enVoice) utterance.voice = enVoice;
+                const selectedIdx = document.getElementById('voiceSelect').value;
+
+                if (selectedIdx !== "" && voices[selectedIdx]) {
+                    utterance.voice = voices[selectedIdx];
+                } else {
+                    const enVoice = voices.find(v => v.lang.startsWith('en'));
+                    if (enVoice) utterance.voice = enVoice;
+                }
 
                 window.speechSynthesis.speak(utterance);
             }
